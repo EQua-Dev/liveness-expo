@@ -1,0 +1,26 @@
+{
+  "auth": {
+    "plugins": {
+      "awsCognitoAuthPlugin": {
+        "IdentityManager": {
+          "Default": {}
+        },
+        "CognitoUserPool": {
+          "Default": {
+            "PoolId": "us-east-1_7UabmGaaZ",
+            "AppClientId": "1v0m275pbkc4knugvv0cpmoc7a",
+            "Region": "us-east-1"
+          }
+        },
+        "CredentialsProvider": {
+          "CognitoIdentity": {
+            "Default": {
+              "PoolId": "us-east-1:a05b6e2c-9ac1-404f-aade-80031cb67e6b",
+              "Region": "us-east-1"
+            }
+          }
+        }
+      }
+    }
+  }
+}
