@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("maven-publish")
+
 }
 
 android {
@@ -40,7 +42,65 @@ android {
     buildFeatures {
         compose = true
     }
+
+
+    publishing {
+        singleVariant("debug") {
+            withSourcesJar()
+            withJavadocJar()
+        }
+        singleVariant("release") {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
 }
+
+
+// Publishing configuration - afterEvaluate is necessary for Android libraries
+afterEvaluate {
+    publishing {
+        publications {
+            create<MavenPublication>("release") {
+                from(components["release"])
+//                groupId = "com.github.sourceidtechorg"
+                groupId = "com.github.EQua-Dev"
+                artifactId = "liveness-expo"
+                version = "1.0.0"
+
+                pom {
+                    name.set("SIDLiveness")
+                    description.set("A SourceID native Android library for performing liveness check for KYC.")
+//                    url.set("https://github.com/sourceidtechorg/sid-address-verification-android")
+                    url.set("https://github.com/EQua-Dev/liveness-expo")
+
+                    licenses {
+                        license {
+                            name.set("MIT License")
+                            url.set("https://opensource.org/licenses/MIT")
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id.set("richard-sid")
+                            name.set("Richard Uzor")
+                            email.set("richard@sourceid.tech")
+                        }
+                    }
+
+                    scm {
+                        connection.set("scm:git:git://github.com/sourceidtechorg/sid-liveness-sdk-android.git")
+                        developerConnection.set("scm:git:ssh://github.com/sourceidtechorg/sid-liveness-sdk-android.git")
+                        url.set("https://github.com/EQua-Dev/liveness-expo")
+//                        url.set("https://github.com/sourceidtechorg/sid-address-verification-android")
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
