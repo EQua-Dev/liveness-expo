@@ -66,17 +66,13 @@ class LivenessActivity : ComponentActivity() {
                             region = region,
                             config = config,
                             onComplete = {
-                                val data = Intent().apply {
-                                    putExtra("message", "Liveness flow completed successfully.")
-                                }
-                                setResult(Activity.RESULT_OK, data)
+                                LivenessSDK.notifyResult(
+                                    LivenessResult.Success("Liveness flow completed successfully.")
+                                )
                                 finish()
                             },
                             onError = { err ->
-                                val data = Intent().apply {
-                                    putExtra("error", err)
-                                }
-                                setResult(Activity.RESULT_CANCELED, data)
+                                LivenessSDK.notifyResult(LivenessResult.Error(err))
                                 finish()
                             }
                         )

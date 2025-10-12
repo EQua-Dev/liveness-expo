@@ -18,17 +18,44 @@ sealed class LivenessResult {
 }
 
 object LivenessSDK {
+    private var callback: ((LivenessResult) -> Unit)? = null
+
     fun launch(
         context: Context,
         sessionId: String,
         region: String,
-        config: LivenessUIConfig
+        config: LivenessUIConfig,
+        onSuccess: ((String) -> Unit)? = null,
+        onError: ((String) -> Unit)? = null
     ) {
-        LivenessActivity.start(context, sessionId, region, config)
+        // Store callback as a single entry point
+        callback = {
+            when (it) {
+                is LivenessResult.Success -> onSuccess?.invoke(it.message)
+                is LivenessResult.Error -> onError?.invoke(it.message)
+            }
+        }
+
+        val intent = Intent(context, LivenessActivity::class.java).apply {
+            putExtra("sessionId", sessionId)
+            putExtra("region", region)
+            putExtra("customTitle", config.customTitle)
+            putExtra("theme", config.theme)
+            putExtra("primaryColorHex", config.primaryColorHex)
+            putExtra("hideBranding", config.hideBranding)
+        }
+
+        context.startActivity(intent)
+
+//        LivenessActivity.start(context, sessionId, region, config)
+    }
+    internal fun notifyResult(result: LivenessResult) {
+        callback?.invoke(result)
+        callback = null // Avoid memory leaks
     }
 
     // ✅ Host apps can use this with ActivityResult API
-    class Contract : ActivityResultContract<LivenessLaunchParams, LivenessResult>() {
+    /*class Contract : ActivityResultContract<LivenessLaunchParams, LivenessResult>() {
         override fun createIntent(context: Context, input: LivenessLaunchParams): Intent {
             return Intent(context, LivenessActivity::class.java).apply {
                 putExtra("sessionId", input.sessionId)
@@ -50,5 +77,5 @@ object LivenessSDK {
                     LivenessResult.Error("Unknown result")
             }
         }
-    }
+    }*/
 }

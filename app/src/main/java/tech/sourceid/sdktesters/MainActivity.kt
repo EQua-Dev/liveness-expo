@@ -2,6 +2,7 @@ package tech.sourceid.sdktesters
 
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -41,23 +42,40 @@ class MainActivity : ComponentActivity() {
                             .padding(innerPadding),
                         contentAlignment = Alignment.Center
                     ) {
-                        val launcher = rememberLauncherForActivityResult(
+                      /*  val launcher = rememberLauncherForActivityResult(
                             contract = LivenessSDK.Contract()
                         ) { result ->
                             when (result) {
                                 is LivenessResult.Success -> Log.i("App", result.message)
                                 is LivenessResult.Error -> Log.e("App", result.message)
                             }
-                        }
+                        }*/
 
                         Button(onClick = {
-                            launcher.launch(
-                                LivenessLaunchParams(
-                                    sessionId = "a12e9b8a-8799-4ded-91aa-dae843b7a9e1",
-                                    region = "us-east-1",
-                                    config = LivenessUIConfig(theme = "dark")
-                                )
+                            LivenessSDK.launch(
+                                context = this@MainActivity,
+                                sessionId = "e63a2b7e-62b2-48f7-af14-ebe67d8ddfaa",
+                                region = "us-east-1",
+                                config = LivenessUIConfig(
+                                    customTitle = "Verify Identity",
+                                    theme = "dark",
+                                    primaryColorHex = "#FF5733"
+                                ),
+                                onSuccess = { message ->
+                                    Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
+                                },
+                                onError = { error ->
+                                    Toast.makeText(this@MainActivity, "Error: $error", Toast.LENGTH_LONG).show()
+                                }
                             )
+
+//                            launcher.launch(
+//                                LivenessLaunchParams(
+//                                    sessionId = "a12e9b8a-8799-4ded-91aa-dae843b7a9e1",
+//                                    region = "us-east-1",
+//                                    config = LivenessUIConfig(theme = "dark")
+//                                )
+//                            )
                         }) {
                             Text("Start Liveness")
                         }
