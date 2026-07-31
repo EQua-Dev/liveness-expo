@@ -66,7 +66,7 @@ afterEvaluate {
 //                groupId = "com.github.sourceidtechorg"
                 groupId = "com.github.EQua-Dev"
                 artifactId = "liveness-expo"
-                version = "1.0.0"
+                version = "1.2.0"
 
                 pom {
                     name.set("SIDLiveness")
@@ -103,6 +103,7 @@ afterEvaluate {
 
 
 dependencies {
+    // Support for Java 8 features
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
     implementation(libs.androidx.core.ktx)
@@ -113,12 +114,6 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-//    implementation("com.amplifyframework:core:2.29.2")
-//    implementation("com.amplifyframework:aws-auth-cognito:2.29.2")
-//    implementation("com.amplifyframework:aws-api:2.29.2")
-// Liveness SDK: keep at 1.6.0, but ensure you include core 2.29.2 explicitly
-//    implementation("com.amplifyframework.ui:liveness:1.6.0")
-
 
     // FaceLivenessDetector dependency
     implementation("com.amplifyframework.ui:liveness:1.6.0")
@@ -128,9 +123,6 @@ dependencies {
 
     // Material3 dependency for theming FaceLivenessDetector
     implementation("androidx.compose.material3:material3:1.3.1")
-
-    // Support for Java 8 features
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

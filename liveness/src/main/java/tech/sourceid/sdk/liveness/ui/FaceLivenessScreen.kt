@@ -53,6 +53,9 @@ fun FaceLivenessScreen(
         contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
     ) { granted ->
         hasCameraPermission = granted
+        if (!granted) {
+            onError("Camera permission denied")
+        }
     }
 
     LaunchedEffect(Unit) {

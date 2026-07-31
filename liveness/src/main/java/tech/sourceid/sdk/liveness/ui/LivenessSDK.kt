@@ -1,9 +1,7 @@
 package tech.sourceid.sdk.liveness.ui
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import androidx.activity.result.contract.ActivityResultContract
 import tech.sourceid.sdk.liveness.data.LivenessUIConfig
 
 data class LivenessLaunchParams(
@@ -28,12 +26,16 @@ object LivenessSDK {
         onSuccess: ((String) -> Unit)? = null,
         onError: ((String) -> Unit)? = null
     ) {
-        // Store callback as a single entry point
         callback = {
             when (it) {
                 is LivenessResult.Success -> onSuccess?.invoke(it.message)
                 is LivenessResult.Error -> onError?.invoke(it.message)
             }
+        }
+
+        if (sessionId.isBlank() || region.isBlank()) {
+            notifyResult(LivenessResult.Error("sessionId and region are required"))
+            return
         }
 
         val intent = Intent(context, LivenessActivity::class.java).apply {
@@ -46,36 +48,14 @@ object LivenessSDK {
         }
 
         context.startActivity(intent)
-
-//        LivenessActivity.start(context, sessionId, region, config)
     }
+
     internal fun notifyResult(result: LivenessResult) {
         callback?.invoke(result)
         callback = null // Avoid memory leaks
     }
 
-    // ✅ Host apps can use this with ActivityResult API
-    /*class Contract : ActivityResultContract<LivenessLaunchParams, LivenessResult>() {
-        override fun createIntent(context: Context, input: LivenessLaunchParams): Intent {
-            return Intent(context, LivenessActivity::class.java).apply {
-                putExtra("sessionId", input.sessionId)
-                putExtra("region", input.region)
-                putExtra("customTitle", input.config.customTitle)
-                putExtra("theme", input.config.theme)
-                putExtra("primaryColorHex", input.config.primaryColorHex)
-                putExtra("hideBranding", input.config.hideBranding)
-            }
-        }
-
-        override fun parseResult(resultCode: Int, intent: Intent?): LivenessResult {
-            return when (resultCode) {
-                Activity.RESULT_OK ->
-                    LivenessResult.Success(intent?.getStringExtra("message") ?: "Success")
-                Activity.RESULT_CANCELED ->
-                    LivenessResult.Error(intent?.getStringExtra("error") ?: "Cancelled")
-                else ->
-                    LivenessResult.Error("Unknown result")
-            }
-        }
-    }*/
+    // Whether a launch is still awaiting its result (used to detect user cancellation).
+    internal val hasPendingCallback: Boolean
+        get() = callback != null
 }
