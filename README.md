@@ -204,6 +204,16 @@ The maven coordinates come from the repository (`com.github.<owner>:<repo>:<tag>
 ./gradlew :liveness:assembleRelease :liveness:publishReleasePublicationToMavenLocal
 ```
 
+Release checklist for a new tag `vX.Y.Z`:
+
+1. Bump `version` in `liveness/build.gradle.kts` and the versions in this README.
+2. Bump the `:app` dependency to `vX.Y.Z` too — the tester consumes the published artifact.
+3. Commit, tag `vX.Y.Z`, push branch + tag.
+4. Trigger and watch the build: `curl -s https://jitpack.io/api/builds/com.github.EQua-Dev/liveness-expo/vX.Y.Z` (first artifact request starts it; `"status": "ok"` = published; on failure read `.../vX.Y.Z/build.log`).
+5. A failed tag stays failed — fix and cut `vX.Y.Z+1`, never move a tag.
+
+> **Why `jitpack.yml` matters:** it restricts the JitPack build to `:liveness`. Without it JitPack builds `:app` as well, which depends on the very artifact version being built — a circular dependency that fails the release (this killed v1.6.0/v1.6.1).
+
 ---
 
 ## License
