@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import com.amplifyframework.AmplifyException
 import com.amplifyframework.core.Amplify
 import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
+import tech.sourceid.sdk.liveness.data.LivenessError
 import tech.sourceid.sdk.liveness.data.LivenessUIConfig
 import tech.sourceid.sdk.liveness.ui.theme.SDKTestersTheme
 
@@ -38,7 +39,13 @@ class LivenessActivity : ComponentActivity() {
                 } else {
                     Log.e("LivenessActivity", "Could not initialize Amplify", e)
                     LivenessSDK.notifyResult(
-                        LivenessResult.Error("Amplify initialization failed: ${e.message}")
+                        LivenessResult.Error(
+                            LivenessError(
+                                code = LivenessError.CONFIG_FAILED,
+                                userMessage = "The verification service could not start. Please try again later.",
+                                debugMessage = "Amplify initialization failed: ${e.message} (recovery: ${e.recoverySuggestion})"
+                            )
+                        )
                     )
                     finish()
                     return
@@ -84,7 +91,7 @@ class LivenessActivity : ComponentActivity() {
         // If the user backs out (or the activity is killed) before a result was
         // delivered, resolve the pending callback so callers never hang.
         if (isFinishing && LivenessSDK.hasPendingCallback) {
-            LivenessSDK.notifyResult(LivenessResult.Error("Liveness check cancelled"))
+            LivenessSDK.notifyResult(LivenessResult.Error(LivenessError.cancelled()))
         }
         super.onDestroy()
     }

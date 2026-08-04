@@ -6,8 +6,10 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import tech.sourceid.sdk.liveness.data.LivenessApiConfig
+import tech.sourceid.sdk.liveness.data.LivenessError
 import tech.sourceid.sdk.liveness.data.LivenessUIConfig
 import tech.sourceid.sdk.liveness.network.SessionStatusChecker
+import tech.sourceid.sdk.liveness.network.StatusCheckOutcome
 import kotlin.concurrent.thread
 
 data class LivenessLaunchParams(
@@ -18,17 +20,16 @@ data class LivenessLaunchParams(
 
 sealed class LivenessResult {
     data class Success(val message: String = "Completed") : LivenessResult()
-    data class Error(val message: String) : LivenessResult()
+    data class Error(val error: LivenessError) : LivenessResult()
 }
 
 object LivenessSDK {
+    internal const val TAG = "LivenessSDK"
+
     private var callback: ((LivenessResult) -> Unit)? = null
 
     /** Session status required before the capture flow is allowed to start. */
     private const val STATUS_CREATED = "CREATED"
-    private const val STATUS_EXPIRED = "EXPIRED"
-
-    private const val TAG = "LivenessSDK"
 
     /**
      * Starts the liveness capture flow.
@@ -38,6 +39,10 @@ object LivenessSDK {
      * `CREATED`; any other status (already used, expired, ...) is reported
      * through [onError] without opening the camera. When [apiConfig] is null
      * the check is skipped and the flow launches directly.
+     *
+     * [onError] receives a [LivenessError]: show `userMessage` to the user,
+     * log `debugMessage` (the SDK already logs it under the `LivenessSDK`
+     * tag), branch on `code` programmatically.
      */
     fun launch(
         context: Context,
@@ -46,17 +51,25 @@ object LivenessSDK {
         config: LivenessUIConfig,
         apiConfig: LivenessApiConfig? = null,
         onSuccess: ((String) -> Unit)? = null,
-        onError: ((String) -> Unit)? = null
+        onError: ((LivenessError) -> Unit)? = null
     ) {
         callback = {
             when (it) {
                 is LivenessResult.Success -> onSuccess?.invoke(it.message)
-                is LivenessResult.Error -> onError?.invoke(it.message)
+                is LivenessResult.Error -> onError?.invoke(it.error)
             }
         }
 
-        if (sessionId.isBlank()){// || region.isBlank()) {
-            notifyResult(LivenessResult.Error("sessionId is required"))
+        if (sessionId.isBlank()) {
+            notifyResult(
+                LivenessResult.Error(
+                    LivenessError(
+                        code = LivenessError.INVALID_ARGUMENTS,
+                        userMessage = "Verification could not start. Please go back and try again.",
+                        debugMessage = "launch() called with a blank sessionId"
+                    )
+                )
+            )
             return
         }
 
@@ -76,43 +89,57 @@ object LivenessSDK {
 
         val mainHandler = Handler(Looper.getMainLooper())
         thread(name = "LivenessSessionStatus") {
-            val result = SessionStatusChecker.fetchStatus(apiConfig, sessionId)
+            val outcome = SessionStatusChecker.fetchStatus(apiConfig, sessionId)
             mainHandler.post {
-                result.fold(
-                    onSuccess = { status ->
-                        if (status.equals(STATUS_CREATED, ignoreCase = true)) {
-                            Log.d(TAG, "launch: Status of the session id is $status")
+                when (outcome) {
+                    is StatusCheckOutcome.Status -> {
+                        if (outcome.value.equals(STATUS_CREATED, ignoreCase = true)) {
                             context.startActivity(intent)
-                        } else if (status.equals(STATUS_EXPIRED, ignoreCase = true)) {
+                        } else {
                             notifyResult(
                                 LivenessResult.Error(
-                                    "Session cannot be used (status: $status). Generate a new session."
-                                )
-                            )
-                        }else {
-                            notifyResult(
-                                LivenessResult.Error(
-                                    "Session cannot be used (status: $status). Generate a new session."
+                                    LivenessError(
+                                        code = LivenessError.SESSION_NOT_USABLE,
+                                        userMessage = "This verification session has already been used or has expired. Please start a new check.",
+                                        debugMessage = "Gateway reported session status \"${outcome.value}\"; launch requires \"$STATUS_CREATED\""
+                                    )
                                 )
                             )
                         }
-                    },
-                    onFailure = { error ->
+                    }
+                    is StatusCheckOutcome.GatewayRejected -> {
                         // The gateway also 400s for sessions that were already
-                        // run, so a failed check means "don't open the camera".
+                        // run, so a rejection means "don't open the camera".
                         notifyResult(
                             LivenessResult.Error(
-                                "Session not usable (${error.message}). " +
-                                    "Generate a new session and try again."
+                                LivenessError(
+                                    code = LivenessError.SESSION_NOT_USABLE,
+                                    userMessage = "This verification session has already been used or has expired. Please start a new check.",
+                                    debugMessage = "Gateway rejected the status check: HTTP ${outcome.httpCode} — ${outcome.gatewayMessage ?: "no message"}"
+                                )
                             )
                         )
                     }
-                )
+                    is StatusCheckOutcome.Unreachable -> {
+                        notifyResult(
+                            LivenessResult.Error(
+                                LivenessError(
+                                    code = LivenessError.STATUS_CHECK_FAILED,
+                                    userMessage = "We couldn't verify your session. Please check your internet connection and try again.",
+                                    debugMessage = "Status check failed before reaching a verdict: ${outcome.detail}"
+                                )
+                            )
+                        )
+                    }
+                }
             }
         }
     }
 
     internal fun notifyResult(result: LivenessResult) {
+        if (result is LivenessResult.Error) {
+            Log.e(TAG, "Liveness failed ${result.error}")
+        }
         callback?.invoke(result)
         callback = null // Avoid memory leaks
     }

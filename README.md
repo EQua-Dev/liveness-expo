@@ -35,7 +35,7 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    implementation("com.github.EQua-Dev:liveness-expo:v1.5.0")
+    implementation("com.github.EQua-Dev:liveness-expo:v1.6.0")
 }
 ```
 
@@ -135,17 +135,35 @@ as the `reference`. Omit `apiConfig` to skip the check and launch directly
 | Callback | When it fires |
 | --- | --- |
 | `onSuccess(message)` | The capture flow completed. Verify the result server-side. |
-| `onError(message)` | Anything else — see the table below. |
+| `onError(error: LivenessError)` | Anything else — see the error contract below. |
 
-Exactly **one** callback fires per `launch`. Notable `onError` messages:
+Exactly **one** callback fires per `launch`.
 
-| Message | Meaning |
-| --- | --- |
-| `"Liveness check cancelled"` | The user backed out of the flow before completing it. |
-| `"Camera permission denied"` | The user declined the runtime camera permission. |
-| `"sessionId and region are required"` | `launch` was called with blank arguments. |
-| `"Amplify initialization failed: ..."` | AWS Amplify could not be configured. |
-| Anything else | Propagated from the AWS Face Liveness detector (network, expired session, ...). |
+### Error contract (`LivenessError`)
+
+`onError` receives a structured `LivenessError` that separates what you show
+the user from what you log:
+
+* **`userMessage`** — friendly, actionable text safe to show end users (toast/dialog/snackbar).
+* **`debugMessage`** — full technical detail (exception type, gateway HTTP code, cause). The SDK also logs every failure itself under the `LivenessSDK` Logcat tag: `adb logcat -s LivenessSDK`.
+* **`code`** — stable identifier for programmatic handling (plus the `error.isCancelled` shortcut).
+
+```kotlin
+onError = { error ->
+    Log.e("MyApp", "Liveness failed $error")   // toString() = "[CODE] debug detail"
+    Toast.makeText(this, error.userMessage, Toast.LENGTH_LONG).show()
+}
+```
+
+| Code | Typical user message | Meaning |
+| --- | --- | --- |
+| `CANCELLED` | "Liveness check cancelled" | The user backed out before completing the flow. |
+| `CAMERA_PERMISSION_DENIED` | "Camera access is required…" | The runtime camera permission was declined. |
+| `INVALID_ARGUMENTS` | "Verification could not start…" | `launch` was called with a blank session id. |
+| `SESSION_NOT_USABLE` | "This verification session has already been used or has expired…" | Pre-flight check: the status was not `CREATED`, or the gateway rejected the session (it also 400s for already-run sessions). |
+| `STATUS_CHECK_FAILED` | "We couldn't verify your session…" | The pre-flight check couldn't reach the gateway (network/timeout). |
+| `CONFIG_FAILED` | "The verification service could not start…" | AWS Amplify could not be configured. |
+| `DETECTOR_FAILED` | Varies by cause — invalid/expired session, capture timeout, service rejection, connection trouble | AWS Face Liveness detector failure; `debugMessage` names the exact exception type, message, and recovery suggestion. |
 
 ---
 
@@ -176,8 +194,8 @@ The SDK bundles its own `amplifyconfiguration.json` (SourceID's Cognito identity
 Releases are consumed through JitPack, which builds from git tags:
 
 ```bash
-git tag v1.5.0
-git push origin v1.5.0        # or the appropriate remote
+git tag v1.6.0
+git push origin v1.6.0        # or the appropriate remote
 ```
 
 The maven coordinates come from the repository (`com.github.<owner>:<repo>:<tag>`); the `maven-publish` block in `liveness/build.gradle.kts` supplies the POM metadata. To verify a build locally:

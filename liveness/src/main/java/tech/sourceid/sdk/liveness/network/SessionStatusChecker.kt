@@ -5,6 +5,20 @@ import tech.sourceid.sdk.liveness.data.LivenessApiConfig
 import java.net.HttpURLConnection
 import java.net.URL
 
+/** Outcome of a session status query, kept distinct so callers can phrase
+ * user-facing messages accurately (gateway said no vs. couldn't reach it). */
+internal sealed class StatusCheckOutcome {
+    /** The gateway answered with a session status (e.g. "CREATED"). */
+    data class Status(val value: String) : StatusCheckOutcome()
+
+    /** The gateway answered but rejected the request (non-2xx). This is also
+     * what happens for sessions that were already run. */
+    data class GatewayRejected(val httpCode: Int, val gatewayMessage: String?) : StatusCheckOutcome()
+
+    /** The gateway could not be reached or answered garbage. */
+    data class Unreachable(val detail: String) : StatusCheckOutcome()
+}
+
 /**
  * Queries the gateway's `POST /liveness/liveness-result` endpoint for the
  * status of a session. The endpoint expects the session id in the
@@ -13,8 +27,7 @@ import java.net.URL
  */
 internal object SessionStatusChecker {
 
-    /** Returns the session status string, or fails with a readable message. */
-    fun fetchStatus(apiConfig: LivenessApiConfig, sessionId: String): Result<String> {
+    fun fetchStatus(apiConfig: LivenessApiConfig, sessionId: String): StatusCheckOutcome {
         var connection: HttpURLConnection? = null
         return try {
             val url = URL(apiConfig.baseUrl.trimEnd('/') + "/liveness/liveness-result")
@@ -40,21 +53,17 @@ internal object SessionStatusChecker {
                 val gatewayMessage = runCatching {
                     JSONObject(body).optString("message")
                 }.getOrNull().takeUnless { it.isNullOrBlank() }
-                return Result.failure(
-                    IllegalStateException(
-                        gatewayMessage ?: "Gateway returned HTTP $httpCode"
-                    )
-                )
+                return StatusCheckOutcome.GatewayRejected(httpCode, gatewayMessage)
             }
 
             val status = JSONObject(body).optJSONObject("data")?.optString("status")
             if (status.isNullOrBlank()) {
-                Result.failure(IllegalStateException("Gateway response has no session status"))
+                StatusCheckOutcome.Unreachable("Gateway response has no session status (body: ${body.take(200)})")
             } else {
-                Result.success(status)
+                StatusCheckOutcome.Status(status)
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            StatusCheckOutcome.Unreachable("${e.javaClass.simpleName}: ${e.message}")
         } finally {
             connection?.disconnect()
         }

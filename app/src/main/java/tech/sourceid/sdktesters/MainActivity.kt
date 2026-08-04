@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.amplifyframework.core.Amplify
-import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
+//import com.amplifyframework.core.Amplify
+//import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
 import tech.sourceid.sdk.liveness.data.LivenessUIConfig
 import tech.sourceid.sdk.liveness.ui.LivenessLaunchParams
 import tech.sourceid.sdk.liveness.ui.LivenessResult
@@ -25,14 +25,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize Amplify Auth
-        try {
-            Amplify.addPlugin(AWSCognitoAuthPlugin())
-            Amplify.configure(applicationContext)
-            Log.i("MainActivity", "Amplify initialized successfully")
-        } catch (e: Exception) {
-            Log.e("MainActivity", "Could not initialize Amplify", e)
-        }
+//        // Initialize Amplify Auth
+//        try {
+//            Amplify.addPlugin(AWSCognitoAuthPlugin())
+//            Amplify.configure(applicationContext)
+//            Log.i("MainActivity", "Amplify initialized successfully")
+//        } catch (e: Exception) {
+//            Log.e("MainActivity", "Could not initialize Amplify", e)
+//        }
 
         enableEdgeToEdge()
         setContent {
@@ -67,8 +67,10 @@ class MainActivity : ComponentActivity() {
                                     Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
                                 },
                                 onError = { error ->
-                                    Log.d(TAG, "onCreate: $error")
-                                    Toast.makeText(this@MainActivity, "Error: $error", Toast.LENGTH_LONG).show()
+                                    // Full technical detail for debugging ("[CODE] debug message")
+                                    Log.e(TAG, "Liveness failed $error")
+                                    // Friendly text for the user
+                                    Toast.makeText(this@MainActivity, error.userMessage, Toast.LENGTH_LONG).show()
                                 }
                             )
 

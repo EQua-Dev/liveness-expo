@@ -28,24 +28,49 @@ import android.util.Log
 import com.amplifyframework.ui.liveness.model.FaceLivenessDetectionException
 import com.amplifyframework.ui.liveness.ui.FaceLivenessDetector
 import tech.sourceid.liveness.R
+import tech.sourceid.sdk.liveness.data.LivenessError
 import tech.sourceid.sdk.liveness.data.LivenessUIConfig
 import tech.sourceid.sdk.liveness.ui.theme.buildColorScheme
 
 /**
- * [FaceLivenessDetectionException] is not a [Throwable], so its default
- * toString() is just "ClassName@hash". Build a readable message from its
- * actual parts instead.
+ * Maps the AWS detector failure to a [LivenessError] with a friendly user
+ * message per failure kind. [FaceLivenessDetectionException] is not a
+ * [Throwable] (its toString() is just "ClassName@hash"), so the debug
+ * message is rebuilt from its actual parts.
  */
-internal fun FaceLivenessDetectionException.toReadableMessage(): String {
+internal fun FaceLivenessDetectionException.toLivenessError(): LivenessError {
     if (this is FaceLivenessDetectionException.UserCancelledException) {
-        return "Liveness check cancelled"
+        return LivenessError.cancelled()
     }
+
+    // Some subtypes are internal to the AWS library, so match by class name.
+    val userMessage = when (this::class.simpleName) {
+        "SessionNotFoundException" ->
+            "This verification session is invalid or was already used. Please start a new check."
+        "SessionTimedOutException" ->
+            "The verification session timed out. Please start a new check."
+        "FaceInOvalMatchExceededTimeLimitException" ->
+            "We couldn't capture your face in time. Find a well-lit spot and try again."
+        "CameraPermissionDeniedException" ->
+            "Camera access is required for the liveness check. Please allow camera access and try again."
+        "AccessDeniedException" ->
+            "The verification service rejected the request. Please try again later."
+        else ->
+            "Something went wrong during the liveness check. Please check your connection and try again."
+    }
+
     val kind = this::class.simpleName ?: "FaceLivenessDetectionException"
-    return buildString {
+    val debugMessage = buildString {
         append("$kind: $message")
         if (recoverySuggestion.isNotBlank()) append(" — $recoverySuggestion")
         throwable?.message?.let { append(" (cause: $it)") }
     }
+
+    return LivenessError(
+        code = LivenessError.DETECTOR_FAILED,
+        userMessage = userMessage,
+        debugMessage = debugMessage
+    )
 }
 
 
@@ -56,7 +81,7 @@ fun FaceLivenessScreen(
     region: String,
     config: LivenessUIConfig,
     onComplete: () -> Unit,
-    onError: (String) -> Unit
+    onError: (LivenessError) -> Unit
 ) {
     val context = LocalContext.current
     var hasCameraPermission by remember {
@@ -73,7 +98,13 @@ fun FaceLivenessScreen(
     ) { granted ->
         hasCameraPermission = granted
         if (!granted) {
-            onError("Camera permission denied")
+            onError(
+                LivenessError(
+                    code = LivenessError.CAMERA_PERMISSION_DENIED,
+                    userMessage = "Camera access is required for the liveness check. Please allow camera access in Settings and try again.",
+                    debugMessage = "Runtime CAMERA permission denied by the user"
+                )
+            )
         }
     }
 
@@ -127,8 +158,8 @@ fun FaceLivenessScreen(
                         disableStartView = true,
                         onComplete = { onComplete() },
                         onError = { error ->
-                            Log.e("LivenessSDK", "Face liveness failed: ${error.message}", error.throwable)
-                            onError(error.toReadableMessage())
+                            Log.e(LivenessSDK.TAG, "Face liveness failed: ${error.message}", error.throwable)
+                            onError(error.toLivenessError())
                         }
                     )
                 }
