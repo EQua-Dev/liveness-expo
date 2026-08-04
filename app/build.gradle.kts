@@ -79,7 +79,7 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
 //    implementation(project(":liveness"))
-    implementation("com.github.EQua-Dev:liveness-expo:v1.2.0")
+    implementation("com.github.EQua-Dev:liveness-expo:v1.4.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

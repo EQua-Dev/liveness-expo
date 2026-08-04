@@ -24,10 +24,29 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import android.util.Log
+import com.amplifyframework.ui.liveness.model.FaceLivenessDetectionException
 import com.amplifyframework.ui.liveness.ui.FaceLivenessDetector
 import tech.sourceid.liveness.R
 import tech.sourceid.sdk.liveness.data.LivenessUIConfig
 import tech.sourceid.sdk.liveness.ui.theme.buildColorScheme
+
+/**
+ * [FaceLivenessDetectionException] is not a [Throwable], so its default
+ * toString() is just "ClassName@hash". Build a readable message from its
+ * actual parts instead.
+ */
+internal fun FaceLivenessDetectionException.toReadableMessage(): String {
+    if (this is FaceLivenessDetectionException.UserCancelledException) {
+        return "Liveness check cancelled"
+    }
+    val kind = this::class.simpleName ?: "FaceLivenessDetectionException"
+    return buildString {
+        append("$kind: $message")
+        if (recoverySuggestion.isNotBlank()) append(" — $recoverySuggestion")
+        throwable?.message?.let { append(" (cause: $it)") }
+    }
+}
 
 
 @Composable
@@ -100,7 +119,10 @@ fun FaceLivenessScreen(
                         region = region,
                         disableStartView = false,
                         onComplete = { onComplete() },
-                        onError = { error -> onError(error.toString()) }
+                        onError = { error ->
+                            Log.e("LivenessSDK", "Face liveness failed: ${error.message}", error.throwable)
+                            onError(error.toReadableMessage())
+                        }
                     )
                 }
 

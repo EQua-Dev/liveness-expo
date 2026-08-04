@@ -19,7 +19,9 @@ import tech.sourceid.sdk.liveness.ui.LivenessResult
 import tech.sourceid.sdk.liveness.ui.LivenessSDK
 import tech.sourceid.sdktesters.ui.theme.SDKTestersTheme
 
+
 class MainActivity : ComponentActivity() {
+    val TAG = "MainActivity"
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -54,8 +56,8 @@ class MainActivity : ComponentActivity() {
                         Button(onClick = {
                             LivenessSDK.launch(
                                 context = this@MainActivity,
-                                sessionId = "d66bde28-8847-4a93-90d0-14d0430cc4cf",
-                                region = "us-east-1",
+                                sessionId = "91736032-053e-4376-908a-2cb5a2d264be",
+//                                region = "us-east-1",
                                 config = LivenessUIConfig(
                                     customTitle = "Verify Identity",
                                     theme = "dark",
@@ -65,6 +67,7 @@ class MainActivity : ComponentActivity() {
                                     Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
                                 },
                                 onError = { error ->
+                                    Log.d(TAG, "onCreate: $error")
                                     Toast.makeText(this@MainActivity, "Error: $error", Toast.LENGTH_LONG).show()
                                 }
                             )
