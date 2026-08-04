@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import tech.sourceid.sdk.liveness.data.LivenessApiConfig
 import tech.sourceid.sdk.liveness.data.LivenessUIConfig
 import tech.sourceid.sdk.liveness.network.SessionStatusChecker
@@ -26,6 +27,8 @@ object LivenessSDK {
     /** Session status required before the capture flow is allowed to start. */
     private const val STATUS_CREATED = "CREATED"
     private const val STATUS_EXPIRED = "EXPIRED"
+
+    private const val TAG = "LivenessSDK"
 
     /**
      * Starts the liveness capture flow.
@@ -78,6 +81,7 @@ object LivenessSDK {
                 result.fold(
                     onSuccess = { status ->
                         if (status.equals(STATUS_CREATED, ignoreCase = true)) {
+                            Log.d(TAG, "launch: Status of the session id is $status")
                             context.startActivity(intent)
                         } else if (status.equals(STATUS_EXPIRED, ignoreCase = true)) {
                             notifyResult(

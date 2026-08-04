@@ -83,8 +83,14 @@ fun FaceLivenessScreen(
         }
     }
 
+    var showInstructions by remember { mutableStateOf(true) }
+
     if (hasCameraPermission) {
         MaterialTheme(colorScheme = buildColorScheme(config)) {
+            if (showInstructions) {
+                LivenessStartScreen(config = config) { showInstructions = false }
+                return@MaterialTheme
+            }
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
@@ -117,7 +123,8 @@ fun FaceLivenessScreen(
                     FaceLivenessDetector(
                         sessionId = sessionId,
                         region = region,
-                        disableStartView = false,
+                        // The SDK shows its own instruction page first.
+                        disableStartView = true,
                         onComplete = { onComplete() },
                         onError = { error ->
                             Log.e("LivenessSDK", "Face liveness failed: ${error.message}", error.throwable)

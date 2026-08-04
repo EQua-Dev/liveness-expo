@@ -56,7 +56,7 @@ class MainActivity : ComponentActivity() {
                         Button(onClick = {
                             LivenessSDK.launch(
                                 context = this@MainActivity,
-                                sessionId = "91736032-053e-4376-908a-2cb5a2d264be",
+                                sessionId = "43a9961e-a01d-444c-a852-f6e2f9b9b784",
 //                                region = "us-east-1",
                                 config = LivenessUIConfig(
                                     customTitle = "Verify Identity",
