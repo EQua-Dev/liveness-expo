@@ -78,8 +78,8 @@ dependencies {
     // Support for Java 8 features
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
-//    implementation("com.github.EQua-Dev:liveness-expo:v1.6.0")
-    implementation("com.github.EQua-Dev:liveness-expo:v1.6.0")
+//    implementation("com.github.EQua-Dev:liveness-expo:v1.6.1")
+    implementation("com.github.EQua-Dev:liveness-expo:v1.6.1")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
