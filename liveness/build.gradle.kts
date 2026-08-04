@@ -66,7 +66,7 @@ afterEvaluate {
 //                groupId = "com.github.sourceidtechorg"
                 groupId = "com.github.EQua-Dev"
                 artifactId = "liveness-expo"
-                version = "1.2.0"
+                version = "1.3.0"
 
                 pom {
                     name.set("SIDLiveness")

@@ -35,7 +35,7 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    implementation("com.github.EQua-Dev:liveness-expo:v1.2.0")
+    implementation("com.github.EQua-Dev:liveness-expo:v1.3.0")
 }
 ```
 
@@ -98,6 +98,38 @@ LivenessSDK.launch(
 )
 ```
 
+### Pre-flight session status check (optional)
+
+Liveness sessions are single-use and short-lived. To avoid opening the camera
+for a session that was already used or has expired, pass a `LivenessApiConfig`
+— the SDK then asks the SourceID gateway for the session's status first and
+only launches the capture flow when the status is `CREATED`:
+
+```kotlin
+import tech.sourceid.sdk.liveness.data.LivenessApiConfig
+
+LivenessSDK.launch(
+    context = this,
+    sessionId = sessionIdFromYourBackend,
+    region = "us-east-1",
+    config = LivenessUIConfig(theme = "dark"),
+    apiConfig = LivenessApiConfig(
+        baseUrl = "https://<your-gateway-host>/v1/api",
+        apiKey = yourApiKey,          // x-api-key header
+        bearerToken = freshUserToken  // Authorization header; tokens expire
+    ),
+    onSuccess = { /* ... */ },
+    onError = { error ->
+        // Also fires when the status check fails, e.g.
+        // "Session cannot be used (status: COMPLETED). Generate a new session."
+    }
+)
+```
+
+The check calls `POST {baseUrl}/liveness/liveness-result` with the session id
+as the `reference`. Omit `apiConfig` to skip the check and launch directly
+(previous behaviour).
+
 ### Callbacks
 
 | Callback | When it fires |
@@ -144,8 +176,8 @@ The SDK bundles its own `amplifyconfiguration.json` (SourceID's Cognito identity
 Releases are consumed through JitPack, which builds from git tags:
 
 ```bash
-git tag v1.2.0
-git push origin v1.2.0        # or the appropriate remote
+git tag v1.3.0
+git push origin v1.3.0        # or the appropriate remote
 ```
 
 The maven coordinates come from the repository (`com.github.<owner>:<repo>:<tag>`); the `maven-publish` block in `liveness/build.gradle.kts` supplies the POM metadata. To verify a build locally:
