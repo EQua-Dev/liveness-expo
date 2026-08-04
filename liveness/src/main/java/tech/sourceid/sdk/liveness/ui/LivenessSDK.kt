@@ -25,6 +25,7 @@ object LivenessSDK {
 
     /** Session status required before the capture flow is allowed to start. */
     private const val STATUS_CREATED = "CREATED"
+    private const val STATUS_EXPIRED = "EXPIRED"
 
     /**
      * Starts the liveness capture flow.
@@ -38,7 +39,7 @@ object LivenessSDK {
     fun launch(
         context: Context,
         sessionId: String,
-        region: String,
+        region: String = "us-east-1",
         config: LivenessUIConfig,
         apiConfig: LivenessApiConfig? = null,
         onSuccess: ((String) -> Unit)? = null,
@@ -51,8 +52,8 @@ object LivenessSDK {
             }
         }
 
-        if (sessionId.isBlank() || region.isBlank()) {
-            notifyResult(LivenessResult.Error("sessionId and region are required"))
+        if (sessionId.isBlank()){// || region.isBlank()) {
+            notifyResult(LivenessResult.Error("sessionId is required"))
             return
         }
 
@@ -78,7 +79,13 @@ object LivenessSDK {
                     onSuccess = { status ->
                         if (status.equals(STATUS_CREATED, ignoreCase = true)) {
                             context.startActivity(intent)
-                        } else {
+                        } else if (status.equals(STATUS_EXPIRED, ignoreCase = true)) {
+                            notifyResult(
+                                LivenessResult.Error(
+                                    "Session cannot be used (status: $status). Generate a new session."
+                                )
+                            )
+                        }else {
                             notifyResult(
                                 LivenessResult.Error(
                                     "Session cannot be used (status: $status). Generate a new session."
