@@ -63,7 +63,15 @@ internal fun FaceLivenessDetectionException.toLivenessError(): LivenessError {
     val debugMessage = buildString {
         append("$kind: $message")
         if (recoverySuggestion.isNotBlank()) append(" — $recoverySuggestion")
-        throwable?.message?.let { append(" (cause: $it)") }
+        // The wrapped throwable's TYPE often carries the real story (e.g.
+        // WebSocket/timeout classes) even when its message is generic.
+        var cause: Throwable? = throwable
+        var depth = 0
+        while (cause != null && depth < 3) {
+            append(" (cause: ${cause.javaClass.simpleName}: ${cause.message})")
+            cause = cause.cause?.takeIf { it !== cause }
+            depth++
+        }
     }
 
     return LivenessError(
