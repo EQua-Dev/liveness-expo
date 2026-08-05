@@ -182,7 +182,12 @@ fun FaceLivenessScreen(
                             )
                             Image(
                                 modifier = Modifier.size(96.dp),
-                                painter = painterResource(id = R.drawable.sid_logo),
+                                painter = painterResource(
+                                    // sid_logo has white lettering (for dark
+                                    // backgrounds); sid_logo_light has dark
+                                    // lettering for the light theme.
+                                    id = if (isDarkMode) R.drawable.sid_logo else R.drawable.sid_logo_light
+                                ),
                                 contentDescription = null
                             )
                         }
