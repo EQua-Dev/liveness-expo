@@ -35,11 +35,11 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    implementation("com.github.EQua-Dev:liveness-expo:v1.7.2")
+    implementation("com.github.sourceidtechorg:sid-liveness-sdk-android:v1.7.2")
 }
 ```
 
-> **Note:** the artifact is currently published from the `EQua-Dev` mirror. Once the official `sourceidtechorg/sid-liveness-sdk-android` repository is public, the coordinate becomes `com.github.sourceidtechorg:sid-liveness-sdk-android:<tag>` — the API is identical.
+> **Note:** [`sourceidtechorg/sid-liveness-sdk-android`](https://github.com/sourceidtechorg/sid-liveness-sdk-android) is the official repository. The historical `com.github.EQua-Dev:liveness-expo` coordinate still resolves for existing consumers, but new integrations should use the coordinate above.
 
 **3. Declare the camera permission** in your app's `AndroidManifest.xml`:
 
@@ -213,7 +213,7 @@ Release checklist for a new tag `vX.Y.Z`:
 1. Bump `version` in `liveness/build.gradle.kts` and the versions in this README.
 2. Bump the `:app` dependency to `vX.Y.Z` too — the tester consumes the published artifact.
 3. Commit, tag `vX.Y.Z`, push branch + tag.
-4. Trigger and watch the build: `curl -s https://jitpack.io/api/builds/com.github.EQua-Dev/liveness-expo/vX.Y.Z` (first artifact request starts it; `"status": "ok"` = published; on failure read `.../vX.Y.Z/build.log`).
+4. Trigger and watch the build: `curl -s https://jitpack.io/api/builds/com.github.sourceidtechorg/sid-liveness-sdk-android/vX.Y.Z` (first artifact request starts it; `"status": "ok"` = published; on failure read `.../vX.Y.Z/build.log`).
 5. A failed tag stays failed — fix and cut `vX.Y.Z+1`, never move a tag.
 
 > **Why `jitpack.yml` matters:** it restricts the JitPack build to `:liveness`. Without it JitPack builds `:app` as well, which depends on the very artifact version being built — a circular dependency that fails the release (this killed v1.6.0/v1.6.1).

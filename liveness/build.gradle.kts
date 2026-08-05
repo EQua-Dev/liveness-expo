@@ -63,16 +63,14 @@ afterEvaluate {
         publications {
             create<MavenPublication>("release") {
                 from(components["release"])
-//                groupId = "com.github.sourceidtechorg"
-                groupId = "com.github.EQua-Dev"
-                artifactId = "liveness-expo"
+                groupId = "com.github.sourceidtechorg"
+                artifactId = "sid-liveness-sdk-android"
                 version = "1.7.2"
 
                 pom {
                     name.set("SIDLiveness")
                     description.set("A SourceID native Android library for performing liveness check for KYC.")
-//                    url.set("https://github.com/sourceidtechorg/sid-address-verification-android")
-                    url.set("https://github.com/EQua-Dev/liveness-expo")
+                    url.set("https://github.com/sourceidtechorg/sid-liveness-sdk-android")
 
                     licenses {
                         license {
@@ -92,8 +90,7 @@ afterEvaluate {
                     scm {
                         connection.set("scm:git:git://github.com/sourceidtechorg/sid-liveness-sdk-android.git")
                         developerConnection.set("scm:git:ssh://github.com/sourceidtechorg/sid-liveness-sdk-android.git")
-                        url.set("https://github.com/EQua-Dev/liveness-expo")
-//                        url.set("https://github.com/sourceidtechorg/sid-address-verification-android")
+                        url.set("https://github.com/sourceidtechorg/sid-liveness-sdk-android")
                     }
                 }
             }
