@@ -8,6 +8,7 @@ import android.util.Log
 import tech.sourceid.sdk.liveness.data.LivenessApiConfig
 import tech.sourceid.sdk.liveness.data.LivenessError
 import tech.sourceid.sdk.liveness.data.LivenessUIConfig
+import tech.sourceid.sdk.liveness.network.GatewaySessionResult
 import tech.sourceid.sdk.liveness.network.SessionStatusChecker
 import tech.sourceid.sdk.liveness.network.StatusCheckOutcome
 import kotlin.concurrent.thread
@@ -19,7 +20,14 @@ data class LivenessLaunchParams(
 )
 
 sealed class LivenessResult {
-    data class Success(val message: String = "Completed") : LivenessResult()
+    /** [sessionResult] is populated (status/confidence/reference image) when
+     * [LivenessApiConfig] was provided to `launch`; null otherwise or when
+     * the post-completion fetch failed. */
+    data class Success(
+        val message: String = "Completed",
+        val sessionResult: GatewaySessionResult? = null
+    ) : LivenessResult()
+
     data class Error(val error: LivenessError) : LivenessResult()
 }
 
@@ -27,6 +35,13 @@ object LivenessSDK {
     internal const val TAG = "LivenessSDK"
 
     private var callback: ((LivenessResult) -> Unit)? = null
+
+    /** Session + gateway credentials for the post-completion result fetch. */
+    private var resultFetchContext: Pair<String, LivenessApiConfig>? = null
+
+    /** True while the post-completion result fetch is running. */
+    @Volatile
+    private var fetchingResult = false
 
     /** Session status required before the capture flow is allowed to start. */
     private const val STATUS_CREATED = "CREATED"
@@ -50,15 +65,17 @@ object LivenessSDK {
         region: String = "us-east-1",
         config: LivenessUIConfig,
         apiConfig: LivenessApiConfig? = null,
-        onSuccess: ((String) -> Unit)? = null,
+        onSuccess: ((String, GatewaySessionResult?) -> Unit)? = null,
         onError: ((LivenessError) -> Unit)? = null
     ) {
         callback = {
             when (it) {
-                is LivenessResult.Success -> onSuccess?.invoke(it.message)
+                is LivenessResult.Success -> onSuccess?.invoke(it.message, it.sessionResult)
                 is LivenessResult.Error -> onError?.invoke(it.error)
             }
         }
+        fetchingResult = false
+        resultFetchContext = apiConfig?.let { sessionId to it }
 
         if (sessionId.isBlank()) {
             notifyResult(
@@ -89,11 +106,11 @@ object LivenessSDK {
 
         val mainHandler = Handler(Looper.getMainLooper())
         thread(name = "LivenessSessionStatus") {
-            val outcome = SessionStatusChecker.fetchStatus(apiConfig, sessionId)
+            val outcome = SessionStatusChecker.fetchResult(apiConfig, sessionId)
             mainHandler.post {
                 when (outcome) {
                     is StatusCheckOutcome.Status -> {
-                        if (outcome.value.equals(STATUS_CREATED, ignoreCase = true)) {
+                        if (outcome.result.status.equals(STATUS_CREATED, ignoreCase = true)) {
                             context.startActivity(intent)
                         } else {
                             notifyResult(
@@ -101,7 +118,7 @@ object LivenessSDK {
                                     LivenessError(
                                         code = LivenessError.SESSION_NOT_USABLE,
                                         userMessage = "This verification session has already been used or has expired. Please start a new check.",
-                                        debugMessage = "Gateway reported session status \"${outcome.value}\"; launch requires \"$STATUS_CREATED\""
+                                        debugMessage = "Gateway reported session status \"${outcome.result.status}\"; launch requires \"$STATUS_CREATED\""
                                     )
                                 )
                             )
@@ -139,12 +156,46 @@ object LivenessSDK {
     internal fun notifyResult(result: LivenessResult) {
         if (result is LivenessResult.Error) {
             Log.e(TAG, "Liveness failed ${result.error}")
+            deliver(result)
+            return
         }
-        callback?.invoke(result)
-        callback = null // Avoid memory leaks
+
+        // After a successful capture, fetch the scored result from the
+        // gateway (when credentials were provided) and enrich the callback.
+        val context = resultFetchContext
+        if (result is LivenessResult.Success && context != null && result.sessionResult == null) {
+            val (sessionId, apiConfig) = context
+            fetchingResult = true
+            val mainHandler = Handler(Looper.getMainLooper())
+            thread(name = "LivenessResultFetch") {
+                val outcome = SessionStatusChecker.fetchResult(apiConfig, sessionId)
+                val enriched = when (outcome) {
+                    is StatusCheckOutcome.Status -> result.copy(sessionResult = outcome.result)
+                    else -> {
+                        // The capture itself succeeded — deliver success and
+                        // leave the result fetch to the host's backend.
+                        Log.w(TAG, "Could not fetch session result after completion: $outcome")
+                        result
+                    }
+                }
+                mainHandler.post { deliver(enriched) }
+            }
+            return
+        }
+
+        deliver(result)
     }
 
-    // Whether a launch is still awaiting its result (used to detect user cancellation).
+    private fun deliver(result: LivenessResult) {
+        callback?.invoke(result)
+        callback = null // Avoid memory leaks
+        resultFetchContext = null
+        fetchingResult = false
+    }
+
+    // Whether a launch is still awaiting its result (used to detect user
+    // cancellation). False during the post-completion result fetch so the
+    // closing activity is not mistaken for a cancellation.
     internal val hasPendingCallback: Boolean
-        get() = callback != null
+        get() = callback != null && !fetchingResult
 }

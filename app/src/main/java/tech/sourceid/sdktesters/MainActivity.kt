@@ -56,15 +56,21 @@ class MainActivity : ComponentActivity() {
                         Button(onClick = {
                             LivenessSDK.launch(
                                 context = this@MainActivity,
-                                sessionId = "43a9961e-a01d-444c-a852-f6e2f9b9b784",
+                                sessionId = "c42d760e-1d66-4c42-9fae-1ce5be66afe3",
 //                                region = "us-east-1",
                                 config = LivenessUIConfig(
                                     customTitle = "Verify Identity",
                                     theme = "dark",
                                     primaryColorHex = "#FF5733"
                                 ),
-                                onSuccess = { message ->
-                                    Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
+                                onSuccess = { message, sessionResult ->
+                                    // sessionResult is non-null when apiConfig was provided:
+                                    // status, confidence score, and reference image URL.
+                                    Log.i(TAG, "Liveness result: $sessionResult")
+                                    val display = sessionResult?.confidence
+                                        ?.let { "$message (confidence: ${"%.1f".format(it)}%)" }
+                                        ?: message
+                                    Toast.makeText(this@MainActivity, display, Toast.LENGTH_LONG).show()
                                 },
                                 onError = { error ->
                                     // Full technical detail for debugging ("[CODE] debug message")

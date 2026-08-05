@@ -35,7 +35,7 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    implementation("com.github.EQua-Dev:liveness-expo:v1.6.2")
+    implementation("com.github.EQua-Dev:liveness-expo:v1.7.0")
 }
 ```
 
@@ -66,7 +66,7 @@ The SDK requests the permission at runtime for you; the manifest entry is still 
 
 A liveness check runs against a **session** created server-side with Amazon Rekognition (`CreateFaceLivenessSession`). Your backend (e.g. the SourceID gateway's `POST /liveness/generate-liveness-url`) creates the session and returns the `sessionId`; after the flow completes, your backend fetches the confidence result (`GetFaceLivenessSessionResults`).
 
-The SDK **never scores the check itself** — it runs the capture flow. `onSuccess` means the user completed the flow; your backend decides pass/fail from the session results.
+The SDK **never scores the check itself** — it runs the capture flow. `onSuccess` means the user completed the flow. When you pass a `LivenessApiConfig`, the SDK also fetches the scored result from the gateway right after completion and hands it to `onSuccess` (status, confidence, reference image URL); without it, fetch the result from your backend.
 
 ---
 
@@ -88,9 +88,13 @@ LivenessSDK.launch(
         theme = "dark",
         primaryColorHex = "#0A84FF"
     ),
-    onSuccess = { message ->
+    onSuccess = { message, sessionResult ->
         // The user completed the capture flow.
-        // Fetch the session result from your backend to decide pass/fail.
+        // sessionResult is non-null when apiConfig was provided:
+        //   sessionResult.status            // e.g. "SUCCEEDED"
+        //   sessionResult.confidence        // 0–100 liveness score
+        //   sessionResult.referenceImageUrl // short-lived signed image URL
+        // Without apiConfig, fetch the result from your backend instead.
     },
     onError = { error ->
         // Permission denied, cancelled, session/network failure, ...
@@ -134,7 +138,7 @@ as the `reference`. Omit `apiConfig` to skip the check and launch directly
 
 | Callback | When it fires |
 | --- | --- |
-| `onSuccess(message)` | The capture flow completed. Verify the result server-side. |
+| `onSuccess(message, sessionResult: GatewaySessionResult?)` | The capture flow completed. `sessionResult` carries the scored gateway result (status/confidence/reference image URL) when `apiConfig` was provided; verify server-side otherwise. |
 | `onError(error: LivenessError)` | Anything else — see the error contract below. |
 
 Exactly **one** callback fires per `launch`.
@@ -194,8 +198,8 @@ The SDK bundles its own `amplifyconfiguration.json` (SourceID's Cognito identity
 Releases are consumed through JitPack, which builds from git tags:
 
 ```bash
-git tag v1.6.2
-git push origin v1.6.2        # or the appropriate remote
+git tag v1.7.0
+git push origin v1.7.0        # or the appropriate remote
 ```
 
 The maven coordinates come from the repository (`com.github.<owner>:<repo>:<tag>`); the `maven-publish` block in `liveness/build.gradle.kts` supplies the POM metadata. To verify a build locally:
