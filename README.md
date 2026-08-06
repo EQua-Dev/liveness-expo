@@ -66,7 +66,7 @@ The SDK requests the permission at runtime for you; the manifest entry is still 
 
 A liveness check runs against a **session** created server-side with Amazon Rekognition (`CreateFaceLivenessSession`). Your backend (e.g. the SourceID gateway's `POST /liveness/generate-liveness-url`) creates the session and returns the `sessionId`; after the flow completes, your backend fetches the confidence result (`GetFaceLivenessSessionResults`).
 
-The SDK **never scores the check itself** — it runs the capture flow. `onSuccess` means the user completed the flow. When you pass a `LivenessApiConfig`, the SDK also fetches the scored result from the gateway right after completion and hands it to `onSuccess` (status, confidence, reference image URL); without it, fetch the result from your backend.
+The SDK **never scores the check itself** — it runs the capture flow. `onSuccess` means the user completed the flow. When you pass a `LivenessEnvironment`, the SDK also fetches the scored result from the gateway right after completion and hands it to `onSuccess` (status, confidence, reference image URL); without it, fetch the result from your backend.
 
 ---
 
@@ -90,11 +90,11 @@ LivenessSDK.launch(
     ),
     onSuccess = { message, sessionResult ->
         // The user completed the capture flow.
-        // sessionResult is non-null when apiConfig was provided:
+        // sessionResult is non-null when environment was provided:
         //   sessionResult.status            // e.g. "SUCCEEDED"
         //   sessionResult.confidence        // 0–100 liveness score
         //   sessionResult.referenceImageUrl // short-lived signed image URL
-        // Without apiConfig, fetch the result from your backend instead.
+        // Without environment, fetch the result from your backend instead.
     },
     onError = { error ->
         // Permission denied, cancelled, session/network failure, ...
@@ -105,23 +105,20 @@ LivenessSDK.launch(
 ### Pre-flight session status check (optional)
 
 Liveness sessions are single-use and short-lived. To avoid opening the camera
-for a session that was already used or has expired, pass a `LivenessApiConfig`
-— the SDK then asks the SourceID gateway for the session's status first and
-only launches the capture flow when the status is `CREATED`:
+for a session that was already used or has expired, pass a `LivenessEnvironment`
+— the SDK derives the gateway base URL internally, asks for the session's
+status first, and only launches the capture flow when the status is `CREATED`:
 
 ```kotlin
-import tech.sourceid.sdk.liveness.data.LivenessApiConfig
+import tech.sourceid.sdk.liveness.data.LivenessEnvironment
 
 LivenessSDK.launch(
     context = this,
     sessionId = sessionIdFromYourBackend,
     region = "us-east-1",
     config = LivenessUIConfig(theme = "dark"),
-    apiConfig = LivenessApiConfig(
-        baseUrl = "https://<your-gateway-host>/v1/api",
-        apiKey = yourApiKey,          // x-api-key header
-        bearerToken = freshUserToken  // Authorization header; tokens expire
-    ),
+    environment = LivenessEnvironment.PRODUCTION, // or SANDBOX / UAT / DEVELOPMENT
+    apiKey = yourApiKey, // x-api-key header; omit once the gateway drops it
     onSuccess = { /* ... */ },
     onError = { error ->
         // Also fires when the status check fails, e.g.
@@ -130,15 +127,15 @@ LivenessSDK.launch(
 )
 ```
 
-The check calls `POST {baseUrl}/liveness/liveness-result` with the session id
-as the `reference`. Omit `apiConfig` to skip the check and launch directly
-(previous behaviour).
+The check calls `POST /liveness/liveness-result` with the session id as the
+`reference` (no bearer token needed). Omit `environment` to skip the check
+and launch directly.
 
 ### Callbacks
 
 | Callback | When it fires |
 | --- | --- |
-| `onSuccess(message, sessionResult: GatewaySessionResult?)` | The capture flow completed. `sessionResult` carries the scored gateway result (status/confidence/reference image URL) when `apiConfig` was provided; verify server-side otherwise. |
+| `onSuccess(message, sessionResult: GatewaySessionResult?)` | The capture flow completed. `sessionResult` carries the scored gateway result (status/confidence/reference image URL) when `environment` was provided; verify server-side otherwise. |
 | `onError(error: LivenessError)` | Anything else — see the error contract below. |
 
 Exactly **one** callback fires per `launch`.

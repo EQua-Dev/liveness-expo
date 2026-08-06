@@ -5,7 +5,7 @@ import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import tech.sourceid.sdk.liveness.data.LivenessApiConfig
+import tech.sourceid.sdk.liveness.data.LivenessEnvironment
 import tech.sourceid.sdk.liveness.data.LivenessError
 import tech.sourceid.sdk.liveness.data.LivenessUIConfig
 import tech.sourceid.sdk.liveness.network.GatewaySessionResult
@@ -21,7 +21,7 @@ data class LivenessLaunchParams(
 
 sealed class LivenessResult {
     /** [sessionResult] is populated (status/confidence/reference image) when
-     * [LivenessApiConfig] was provided to `launch`; null otherwise or when
+     * an environment was provided to `launch`; null otherwise or when
      * the post-completion fetch failed. */
     data class Success(
         val message: String = "Completed",
@@ -36,8 +36,8 @@ object LivenessSDK {
 
     private var callback: ((LivenessResult) -> Unit)? = null
 
-    /** Session + gateway credentials for the post-completion result fetch. */
-    private var resultFetchContext: Pair<String, LivenessApiConfig>? = null
+    /** Session + gateway environment/key for the post-completion result fetch. */
+    private var resultFetchContext: Triple<String, LivenessEnvironment, String?>? = null
 
     /** True while the post-completion result fetch is running. */
     @Volatile
@@ -49,11 +49,12 @@ object LivenessSDK {
     /**
      * Starts the liveness capture flow.
      *
-     * When [apiConfig] is provided, the session's status is first verified
+     * When [environment] is provided, the session's status is first verified
      * against the gateway and the flow only launches if the status is
      * `CREATED`; any other status (already used, expired, ...) is reported
-     * through [onError] without opening the camera. When [apiConfig] is null
-     * the check is skipped and the flow launches directly.
+     * through [onError] without opening the camera. When [environment] is null
+     * the check is skipped and the flow launches directly. [apiKey] is sent
+     * as the x-api-key header when provided.
      *
      * [onError] receives a [LivenessError]: show `userMessage` to the user,
      * log `debugMessage` (the SDK already logs it under the `LivenessSDK`
@@ -64,7 +65,8 @@ object LivenessSDK {
         sessionId: String,
         region: String = "us-east-1",
         config: LivenessUIConfig,
-        apiConfig: LivenessApiConfig? = null,
+        environment: LivenessEnvironment? = null,
+        apiKey: String? = null,
         onSuccess: ((String, GatewaySessionResult?) -> Unit)? = null,
         onError: ((LivenessError) -> Unit)? = null
     ) {
@@ -75,7 +77,7 @@ object LivenessSDK {
             }
         }
         fetchingResult = false
-        resultFetchContext = apiConfig?.let { sessionId to it }
+        resultFetchContext = environment?.let { Triple(sessionId, it, apiKey) }
 
         if (sessionId.isBlank()) {
             notifyResult(
@@ -99,14 +101,14 @@ object LivenessSDK {
             putExtra("hideBranding", config.hideBranding)
         }
 
-        if (apiConfig == null) {
+        if (environment == null) {
             context.startActivity(intent)
             return
         }
 
         val mainHandler = Handler(Looper.getMainLooper())
         thread(name = "LivenessSessionStatus") {
-            val outcome = SessionStatusChecker.fetchResult(apiConfig, sessionId)
+            val outcome = SessionStatusChecker.fetchResult(environment, sessionId, apiKey)
             mainHandler.post {
                 when (outcome) {
                     is StatusCheckOutcome.Status -> {
@@ -164,11 +166,11 @@ object LivenessSDK {
         // gateway (when credentials were provided) and enrich the callback.
         val context = resultFetchContext
         if (result is LivenessResult.Success && context != null && result.sessionResult == null) {
-            val (sessionId, apiConfig) = context
+            val (sessionId, environment, apiKey) = context
             fetchingResult = true
             val mainHandler = Handler(Looper.getMainLooper())
             thread(name = "LivenessResultFetch") {
-                val outcome = SessionStatusChecker.fetchResult(apiConfig, sessionId)
+                val outcome = SessionStatusChecker.fetchResult(environment, sessionId, apiKey)
                 val enriched = when (outcome) {
                     is StatusCheckOutcome.Status -> result.copy(sessionResult = outcome.result)
                     else -> {

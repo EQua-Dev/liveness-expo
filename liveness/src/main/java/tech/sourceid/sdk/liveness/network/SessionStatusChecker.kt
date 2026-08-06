@@ -1,7 +1,7 @@
 package tech.sourceid.sdk.liveness.network
 
 import org.json.JSONObject
-import tech.sourceid.sdk.liveness.data.LivenessApiConfig
+import tech.sourceid.sdk.liveness.data.LivenessEnvironment
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -36,10 +36,10 @@ internal sealed class StatusCheckOutcome {
  */
 internal object SessionStatusChecker {
 
-    fun fetchStatus(apiConfig: LivenessApiConfig, sessionId: String): StatusCheckOutcome {
+    fun fetchStatus(environment: LivenessEnvironment, sessionId: String, apiKey: String?): StatusCheckOutcome {
         var connection: HttpURLConnection? = null
         return try {
-            val url = URL(apiConfig.baseUrl.trimEnd('/') + "/liveness/liveness-result")
+            val url = URL(environment.baseUrl.trimEnd('/') + "/liveness/liveness-result")
             connection = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 connectTimeout = 15_000
@@ -47,8 +47,7 @@ internal object SessionStatusChecker {
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json")
                 setRequestProperty("Accept", "application/json")
-                setRequestProperty("x-api-key", apiConfig.apiKey)
-                setRequestProperty("Authorization", "Bearer ${apiConfig.bearerToken}")
+                if (apiKey != null) setRequestProperty("x-api-key", apiKey)
             }
             connection.outputStream.use {
                 it.write(JSONObject().put("reference", sessionId).toString().toByteArray())
@@ -85,10 +84,10 @@ internal object SessionStatusChecker {
         }
     }
 
-    fun fetchResult(apiConfig: LivenessApiConfig, sessionId: String): StatusCheckOutcome {
+    fun fetchResult(environment: LivenessEnvironment, sessionId: String, apiKey: String?): StatusCheckOutcome {
         var connection: HttpURLConnection? = null
         return try {
-            val url = URL(apiConfig.baseUrl.trimEnd('/') + "/liveness/liveness-result")
+            val url = URL(environment.baseUrl.trimEnd('/') + "/liveness/liveness-result")
             connection = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 connectTimeout = 15_000
@@ -96,8 +95,7 @@ internal object SessionStatusChecker {
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json")
                 setRequestProperty("Accept", "application/json")
-                setRequestProperty("x-api-key", apiConfig.apiKey)
-                setRequestProperty("Authorization", "Bearer ${apiConfig.bearerToken}")
+                if (apiKey != null) setRequestProperty("x-api-key", apiKey)
             }
             connection.outputStream.use {
                 it.write(JSONObject().put("reference", sessionId).toString().toByteArray())
