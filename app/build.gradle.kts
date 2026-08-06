@@ -80,7 +80,7 @@ dependencies {
 
 //    implementation(project(":liveness"))
 //    implementation("com.github.EQua-Dev:liveness-expo:v1.7.2")
-    implementation("com.github.sourceidtechorg:sid-liveness-sdk-android:v1.8.0")
+    implementation("com.github.sourceidtechorg:sid-liveness-sdk-android:v1.8.1")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

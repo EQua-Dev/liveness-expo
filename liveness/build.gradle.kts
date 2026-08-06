@@ -65,7 +65,7 @@ afterEvaluate {
                 from(components["release"])
                 groupId = "com.github.sourceidtechorg"
                 artifactId = "sid-liveness-sdk-android"
-                version = "1.8.0"
+                version = "1.8.1"
 
                 pom {
                     name.set("SIDLiveness")
