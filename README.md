@@ -35,7 +35,7 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    implementation("com.github.sourceidtechorg:sid-liveness-sdk-android:v1.7.2")
+    implementation("com.github.sourceidtechorg:sid-liveness-sdk-android:v1.8.0")
 }
 ```
 
@@ -194,8 +194,8 @@ The SDK bundles its own `amplifyconfiguration.json` (SourceID's Cognito identity
 Releases are consumed through JitPack, which builds from git tags:
 
 ```bash
-git tag v1.7.2
-git push origin v1.7.2        # or the appropriate remote
+git tag v1.8.0
+git push origin v1.8.0        # or the appropriate remote
 ```
 
 The maven coordinates come from the repository (`com.github.<owner>:<repo>:<tag>`); the `maven-publish` block in `liveness/build.gradle.kts` supplies the POM metadata. To verify a build locally:
