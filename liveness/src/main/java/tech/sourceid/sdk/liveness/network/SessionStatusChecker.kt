@@ -86,7 +86,7 @@ internal object SessionStatusChecker {
     fun fetchResult(environment: LivenessEnvironment, sessionId: String): StatusCheckOutcome {
         var connection: HttpURLConnection? = null
         return try {
-            val url = URL(environment.baseUrl.trimEnd('/') + "/liveness-result")
+            val url = URL(environment.baseUrl)//.trimEnd('/') + "/liveness-result")
             connection = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 connectTimeout = 15_000

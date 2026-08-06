@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import tech.sourceid.sdk.liveness.data.LivenessEnvironment
 //import com.amplifyframework.core.Amplify
 //import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
 import tech.sourceid.sdk.liveness.data.LivenessUIConfig
@@ -56,7 +57,8 @@ class MainActivity : ComponentActivity() {
                         Button(onClick = {
                             LivenessSDK.launch(
                                 context = this@MainActivity,
-                                sessionId = "9ea3b470-a1d7-4af7-bb91-d076b59c979d",
+                                sessionId = "963a24e9-cf58-4840-881b-8399d03cc0f9",
+                                environment = LivenessEnvironment.SANDBOX,
 //                                region = "us-east-1",
                                 config = LivenessUIConfig(
                                     customTitle = "Verify Identity",
