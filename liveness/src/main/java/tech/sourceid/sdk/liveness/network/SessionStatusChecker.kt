@@ -36,10 +36,10 @@ internal sealed class StatusCheckOutcome {
  */
 internal object SessionStatusChecker {
 
-    fun fetchStatus(environment: LivenessEnvironment, sessionId: String, apiKey: String?): StatusCheckOutcome {
+    fun fetchStatus(environment: LivenessEnvironment, sessionId: String): StatusCheckOutcome {
         var connection: HttpURLConnection? = null
         return try {
-            val url = URL(environment.baseUrl.trimEnd('/') + "/liveness/liveness-result")
+            val url = URL(environment.baseUrl.trimEnd('/') + "/liveness-result")
             connection = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 connectTimeout = 15_000
@@ -47,7 +47,6 @@ internal object SessionStatusChecker {
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json")
                 setRequestProperty("Accept", "application/json")
-                if (apiKey != null) setRequestProperty("x-api-key", apiKey)
             }
             connection.outputStream.use {
                 it.write(JSONObject().put("reference", sessionId).toString().toByteArray())
@@ -84,10 +83,10 @@ internal object SessionStatusChecker {
         }
     }
 
-    fun fetchResult(environment: LivenessEnvironment, sessionId: String, apiKey: String?): StatusCheckOutcome {
+    fun fetchResult(environment: LivenessEnvironment, sessionId: String): StatusCheckOutcome {
         var connection: HttpURLConnection? = null
         return try {
-            val url = URL(environment.baseUrl.trimEnd('/') + "/liveness/liveness-result")
+            val url = URL(environment.baseUrl.trimEnd('/') + "/liveness-result")
             connection = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 connectTimeout = 15_000
@@ -95,7 +94,6 @@ internal object SessionStatusChecker {
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json")
                 setRequestProperty("Accept", "application/json")
-                if (apiKey != null) setRequestProperty("x-api-key", apiKey)
             }
             connection.outputStream.use {
                 it.write(JSONObject().put("reference", sessionId).toString().toByteArray())

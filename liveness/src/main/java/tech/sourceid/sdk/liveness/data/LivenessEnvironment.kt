@@ -5,10 +5,9 @@ package tech.sourceid.sdk.liveness.data
  * SDK derives the gateway base URL internally.
  */
 enum class LivenessEnvironment(internal val baseUrl: String) {
-    PRODUCTION("https://api.usesourceid.com/v1/api"),
-    SANDBOX("https://api.sbx.usesourceid.com/v1/api"),
-    UAT("https://api.uat.usesourceid.com/v1/api"),
-    DEVELOPMENT("https://api-rd.tailfaed50.ts.net/v1/api");
+    PRODUCTION("https://core-api.sourceid.tech/v1/api/liveness"),
+    SANDBOX("https://core-api.sbx.sourceid.tech/v1/api/liveness"),
+    DEVELOPMENT("https://api-rd.tailfaed50.ts.net/v1/api/liveness");
 
     companion object {
         /** Case-insensitive lookup, e.g. "production", "SANDBOX". */

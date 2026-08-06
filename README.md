@@ -117,8 +117,7 @@ LivenessSDK.launch(
     sessionId = sessionIdFromYourBackend,
     region = "us-east-1",
     config = LivenessUIConfig(theme = "dark"),
-    environment = LivenessEnvironment.PRODUCTION, // or SANDBOX / UAT / DEVELOPMENT
-    apiKey = yourApiKey, // x-api-key header; omit once the gateway drops it
+    environment = LivenessEnvironment.PRODUCTION, // or SANDBOX / DEVELOPMENT
     onSuccess = { /* ... */ },
     onError = { error ->
         // Also fires when the status check fails, e.g.
@@ -127,9 +126,9 @@ LivenessSDK.launch(
 )
 ```
 
-The check calls `POST /liveness/liveness-result` with the session id as the
-`reference` (no bearer token needed). Omit `environment` to skip the check
-and launch directly.
+The check calls the gateway's `liveness-result` endpoint with the session id
+as the `reference` — no keys or tokens required. Omit `environment` to skip
+the check and launch directly.
 
 ### Callbacks
 

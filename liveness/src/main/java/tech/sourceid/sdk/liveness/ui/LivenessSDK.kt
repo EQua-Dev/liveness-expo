@@ -36,8 +36,8 @@ object LivenessSDK {
 
     private var callback: ((LivenessResult) -> Unit)? = null
 
-    /** Session + gateway environment/key for the post-completion result fetch. */
-    private var resultFetchContext: Triple<String, LivenessEnvironment, String?>? = null
+    /** Session + gateway environment for the post-completion result fetch. */
+    private var resultFetchContext: Pair<String, LivenessEnvironment>? = null
 
     /** True while the post-completion result fetch is running. */
     @Volatile
@@ -53,8 +53,7 @@ object LivenessSDK {
      * against the gateway and the flow only launches if the status is
      * `CREATED`; any other status (already used, expired, ...) is reported
      * through [onError] without opening the camera. When [environment] is null
-     * the check is skipped and the flow launches directly. [apiKey] is sent
-     * as the x-api-key header when provided.
+     * the check is skipped and the flow launches directly.
      *
      * [onError] receives a [LivenessError]: show `userMessage` to the user,
      * log `debugMessage` (the SDK already logs it under the `LivenessSDK`
@@ -66,7 +65,6 @@ object LivenessSDK {
         region: String = "us-east-1",
         config: LivenessUIConfig,
         environment: LivenessEnvironment? = null,
-        apiKey: String? = null,
         onSuccess: ((String, GatewaySessionResult?) -> Unit)? = null,
         onError: ((LivenessError) -> Unit)? = null
     ) {
@@ -77,7 +75,7 @@ object LivenessSDK {
             }
         }
         fetchingResult = false
-        resultFetchContext = environment?.let { Triple(sessionId, it, apiKey) }
+        resultFetchContext = environment?.let { sessionId to it }
 
         if (sessionId.isBlank()) {
             notifyResult(
@@ -108,7 +106,7 @@ object LivenessSDK {
 
         val mainHandler = Handler(Looper.getMainLooper())
         thread(name = "LivenessSessionStatus") {
-            val outcome = SessionStatusChecker.fetchResult(environment, sessionId, apiKey)
+            val outcome = SessionStatusChecker.fetchResult(environment, sessionId)
             mainHandler.post {
                 when (outcome) {
                     is StatusCheckOutcome.Status -> {
@@ -127,17 +125,23 @@ object LivenessSDK {
                         }
                     }
                     is StatusCheckOutcome.GatewayRejected -> {
-                        // The gateway also 400s for sessions that were already
-                        // run, so a rejection means "don't open the camera".
-                        notifyResult(
-                            LivenessResult.Error(
-                                LivenessError(
-                                    code = LivenessError.SESSION_NOT_USABLE,
-                                    userMessage = "This verification session has already been used or has expired. Please start a new check.",
-                                    debugMessage = "Gateway rejected the status check: HTTP ${outcome.httpCode} — ${outcome.gatewayMessage ?: "no message"}"
-                                )
+                        // 401/403 is an endpoint/config problem, not a spent
+                        // session; other rejections (the gateway also 400s for
+                        // already-run sessions) mean "don't open the camera".
+                        val error = if (outcome.httpCode == 401 || outcome.httpCode == 403) {
+                            LivenessError(
+                                code = LivenessError.STATUS_CHECK_FAILED,
+                                userMessage = "We couldn't verify your session. Please try again later.",
+                                debugMessage = "Gateway rejected the status check with HTTP ${outcome.httpCode} (auth) — ${outcome.gatewayMessage ?: "no message"}"
                             )
-                        )
+                        } else {
+                            LivenessError(
+                                code = LivenessError.SESSION_NOT_USABLE,
+                                userMessage = "This verification session has already been used or has expired. Please start a new check.",
+                                debugMessage = "Gateway rejected the status check: HTTP ${outcome.httpCode} — ${outcome.gatewayMessage ?: "no message"}"
+                            )
+                        }
+                        notifyResult(LivenessResult.Error(error))
                     }
                     is StatusCheckOutcome.Unreachable -> {
                         notifyResult(
@@ -166,11 +170,11 @@ object LivenessSDK {
         // gateway (when credentials were provided) and enrich the callback.
         val context = resultFetchContext
         if (result is LivenessResult.Success && context != null && result.sessionResult == null) {
-            val (sessionId, environment, apiKey) = context
+            val (sessionId, environment) = context
             fetchingResult = true
             val mainHandler = Handler(Looper.getMainLooper())
             thread(name = "LivenessResultFetch") {
-                val outcome = SessionStatusChecker.fetchResult(environment, sessionId, apiKey)
+                val outcome = SessionStatusChecker.fetchResult(environment, sessionId)
                 val enriched = when (outcome) {
                     is StatusCheckOutcome.Status -> result.copy(sessionResult = outcome.result)
                     else -> {
